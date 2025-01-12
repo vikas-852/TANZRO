@@ -16,15 +16,18 @@ const rooms = {};
 // Handle socket connections
 io.on("connection", (socket) => {
     let currentRoom = null;
+    let currentUsername = null; // Store the current user's username
 
     // Listen for a user joining a chat room
-    socket.on("join_chat", ({ code }) => {
+    socket.on("join_chat", ({ code, username }) => {
         currentRoom = code; // Set the current room to the unique code
+        currentUsername = username; // Set the current user's username
+
         if (!rooms[code]) {
             rooms[code] = []; // Initialize the room if it doesn't exist
         }
         socket.join(code); // Join the specific room
-        console.log(`User joined room: ${code}`);
+        console.log(`${username} joined room: ${code}`);
     });
 
     // Listen for a user sending a message
@@ -32,16 +35,16 @@ io.on("connection", (socket) => {
         if (currentRoom) {
             // Send the message to all clients in the room
             io.to(currentRoom).emit("receive_message", {
-                sender: "User", // Replace with actual username if available
+                sender: currentUsername || "User", // Use the stored username
                 message,
             });
-            rooms[currentRoom].push({ sender: "User", message }); // Store messages in the room
+            rooms[currentRoom].push({ sender: currentUsername || "User", message }); // Store messages in the room
         }
     });
 
     // Handle user disconnecting
     socket.on("disconnect", () => {
-        console.log("User disconnected");
+        console.log(`${currentUsername} disconnected`);
     });
 });
 
