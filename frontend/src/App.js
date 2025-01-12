@@ -5,6 +5,7 @@ const socket = io("http://localhost:5000"); // Adjust to your backend URL
 
 function App() {
   const [code, setCode] = useState("");
+  const [username, setUsername] = useState(""); // New state for username
   const [isJoined, setIsJoined] = useState(false);
   const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
@@ -21,15 +22,15 @@ function App() {
   }, []);
 
   const joinChat = () => {
-    if (code.trim() !== "") {
-      socket.emit("join_chat", { code }); // Send join request to server
+    if (code.trim() !== "" && username.trim() !== "") {
+      socket.emit("join_chat", { code, username }); // Send join request with username
       setIsJoined(true);
     }
   };
 
   const sendMessage = () => {
     if (message.trim() !== "") {
-      socket.emit("send_message", { message, code }); // Send message with the code
+      socket.emit("send_message", { message, code, username }); // Send message with the username
       setChatHistory((prev) => [...prev, { sender: "You", text: message }]);
       setMessage("");
     }
@@ -46,6 +47,12 @@ function App() {
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="Enter unique code"
+          />
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Enter your username"
           />
           <button onClick={joinChat}>Join</button>
         </div>
@@ -84,3 +91,4 @@ function App() {
 }
 
 export default App;
+            
