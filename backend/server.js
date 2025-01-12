@@ -1,50 +1,61 @@
+// Import required modules
 const express = require("express");
 const http = require("http");
-const { Server } = require("socket.io");
-const cors = require("cors");
+const socketIo = require("socket.io");
 
+// Create an Express application
 const app = express();
-app.use(cors());
-
+// Create an HTTP server
 const server = http.createServer(app);
+// Set up Socket.IO with the HTTP server
+const io = socketIo(server);
 
-const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"],
-  },
-});
+// Store rooms and their messages
+const rooms = {}; 
 
-let users = {}; // Store connected users
-
+// Handle socket connections
 io.on("connection", (socket) => {
-  console.log(`User connected: ${socket.id}`);
+    let currentRoom = null;
 
-  socket.on("send_message", (data) => {
-    const { to, message } = data;
-    console.log(`Message from ${socket.id} to ${to}: ${message}`);
-    if (users[to]) {
-      io.to(users[to]).emit("receive_message", {
-        sender: socket.id,
-        message,
-      });
-    }
-  });
-
-  socket.on("register", (username) => {
-    users[username] = socket.id;
-    console.log(`${username} registered with ID: ${socket.id}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log(`User disconnected: ${socket.id}`);
-    // Remove user from the list
-    Object.keys(users).forEach((key) => {
-      if (users[key] === socket.id) delete users[key];
+    // Listen for a user joining a chat room
+    socket.on("join_chat", ({ code }) => {
+        currentRoom = code; // Set the current room to the unique code
+        if (!rooms[code]) {
+            rooms[code] = []; // Initialize the room if it doesn't exist
+        }
+        socket.join(code); // Join the specific room
+        console.log(`User joined room: ${code}`);
     });
-  });
+
+    // Listen for a user sending a message
+    socket.on("send_message", ({ message }) => {
+        if (currentRoom) {
+            // Send the message to all clients in the room
+            io.to(currentRoom).emit("receive_message", {
+                sender: "User", // Replace with actual username if available
+                message,
+            });
+            rooms[currentRoom].push({ sender: "User", message }); // Store messages in the room
+        }
+    });
+
+    // Handle user disconnecting
+    socket.on("disconnect", () => {
+        console.log("User disconnected");
+    });
 });
 
-server.listen(5000, () => {
-  console.log("Server is running on port 5000");
+// Optional: Serve your frontend (if using in the same project)
+// Uncomment the following line if you want to serve static files from the frontend build directory
+// app.use(express.static(path.join(__dirname, 'frontend/build')));
+
+// Optional: Define a health check route
+app.get("/", (req, res) => {
+    res.send("Server is running!");
+});
+
+// Start the server
+const PORT = process.env.PORT || 5000; // Use environment variable or default to 5000
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
