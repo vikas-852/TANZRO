@@ -4,33 +4,46 @@ import io from "socket.io-client";
 const socket = io("http://localhost:5000"); // Adjust to your backend URL
 
 function App() {
-  const [code, setCode] = useState("");
-  const [username, setUsername] = useState(""); // New state for username
+  const [username, setUsername] = useState(""); // Only username is needed to join
   const [isJoined, setIsJoined] = useState(false);
   const [message, setMessage] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
+  const [roomCode, setRoomCode] = useState(""); // State to hold the room code
 
   useEffect(() => {
+    // Log when connected
+    socket.on("connect", () => {
+      console.log("Connected to server");
+    });
+
+    // Listen for the room code from the server
+    socket.on("room_code", (code) => {
+      setRoomCode(code); // Set the room code from the server
+      console.log("Joined room with code:", code);
+    });
+
     // Listen for messages from the server
     socket.on("receive_message", (data) => {
+      console.log("Received message:", data); // Log received message
       setChatHistory((prev) => [...prev, { sender: data.sender, text: data.message }]);
     });
 
     return () => {
       socket.off("receive_message");
+      socket.off("room_code");
     };
   }, []);
 
   const joinChat = () => {
-    if (code.trim() !== "" && username.trim() !== "") {
-      socket.emit("join_chat", { code, username }); // Send join request with username
+    if (username.trim() !== "") {
+      socket.emit("join_chat", { username }); // Send join request with username
       setIsJoined(true);
     }
   };
 
   const sendMessage = () => {
     if (message.trim() !== "") {
-      socket.emit("send_message", { message, code, username }); // Send message with the username
+      socket.emit("send_message", { message }); // Send message with the username
       setChatHistory((prev) => [...prev, { sender: "You", text: message }]);
       setMessage("");
     }
@@ -44,12 +57,6 @@ function App() {
           <h3>Join Chat Room</h3>
           <input
             type="text"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Enter unique code"
-          />
-          <input
-            type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Enter your username"
@@ -58,7 +65,7 @@ function App() {
         </div>
       ) : (
         <div>
-          <h3>Chat Room (Code: {code})</h3>
+          <h3>Chat Room (Code: {roomCode})</h3>
           <div
             style={{
               border: "1px solid #ccc",
@@ -91,4 +98,3 @@ function App() {
 }
 
 export default App;
-            
