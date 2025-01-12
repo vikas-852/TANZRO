@@ -13,13 +13,20 @@ const io = socketIo(server);
 // Store rooms and their messages
 const rooms = {}; 
 
+// Function to generate a unique code
+function generateUniqueCode(length = 6) {
+    return Math.random().toString(36).substring(2, length + 2).toUpperCase(); // Generate a random alphanumeric string
+}
+
 // Handle socket connections
 io.on("connection", (socket) => {
     let currentRoom = null;
     let currentUsername = null; // Store the current user's username
 
     // Listen for a user joining a chat room
-    socket.on("join_chat", ({ code, username }) => {
+    socket.on("join_chat", ({ username }) => {
+        // Generate a unique room code for the new chat
+        const code = generateUniqueCode();
         currentRoom = code; // Set the current room to the unique code
         currentUsername = username; // Set the current user's username
 
@@ -28,6 +35,9 @@ io.on("connection", (socket) => {
         }
         socket.join(code); // Join the specific room
         console.log(`${username} joined room: ${code}`);
+
+        // Send the unique code back to the client
+        socket.emit("room_code", code); // Emit the code back to the client
     });
 
     // Listen for a user sending a message
@@ -47,10 +57,6 @@ io.on("connection", (socket) => {
         console.log(`${currentUsername} disconnected`);
     });
 });
-
-// Optional: Serve your frontend (if using in the same project)
-// Uncomment the following line if you want to serve static files from the frontend build directory
-// app.use(express.static(path.join(__dirname, 'frontend/build')));
 
 // Optional: Define a health check route
 app.get("/", (req, res) => {
